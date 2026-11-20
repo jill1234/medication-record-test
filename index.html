@@ -1,0 +1,433 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#84917a"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" sizes="512x512" href="icon-512.png"><title>藥物使用紀錄</title><style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC",sans-serif;color:#354238;background:#faf8f2}*{box-sizing:border-box}body{margin:0}main{max-width:650px;margin:auto;padding:22px 18px calc(125px + env(safe-area-inset-bottom, 0px))}h1{font-size:25px;margin:8px 0 20px}h2{font-size:19px}header small{color:#75806f}.card{background:white;border:1px solid #e6e8df;border-radius:20px;padding:17px;margin:12px 0;box-shadow:0 3px 12px #65735b0d}button,select,input,textarea{font:inherit}button{border:0;border-radius:12px;padding:10px 14px;background:#819178;color:white;cursor:pointer}button.secondary{background:#e9eee5;color:#455642}button.danger{background:#f5e6e1;color:#9a4b40}button:disabled{opacity:.45;cursor:not-allowed}input,select,textarea{border:1px solid #d5dcd1;border-radius:10px;padding:10px;background:white;max-width:100%;width:100%}label{display:block;margin:12px 0 5px;font-size:14px}nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e4e8df;display:flex;justify-content:center;gap:5px;padding:9px 4px calc(22px + env(safe-area-inset-bottom, 0px))}nav button{font-size:12px;flex:1;max-width:155px;background:transparent;color:#6c7868;padding:10px 4px}nav button.active{background:#e9eee5;color:#3c573d}.row{display:flex;gap:10px;align-items:center;justify-content:space-between}.muted{color:#798476;font-size:13px}.pill{border-radius:50px;background:#eef1e9;padding:5px 9px;font-size:12px}.warn{color:#a15a31}.photo{width:64px;height:64px;object-fit:cover;border-radius:12px;background:#e9eee5}.medrow{display:flex;gap:12px;align-items:center}.medrow>div{flex:1}.hidden{display:none}form{margin-top:12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}.full{grid-column:1/-1}p{line-height:1.6}.line-icon{flex:none;vertical-align:middle}.reminder-heading{display:flex;align-items:center;gap:9px}.reminder-heading .line-icon{width:21px;height:21px;color:#77866e}.reminder-due,.reminder-future,.reminder-off{display:inline-flex;align-items:center;gap:7px;border-radius:9px;padding:7px 10px;line-height:1.5}.reminder-due{color:#94574e;background:#fbefec;border:1px solid #e9cbc5;border-left:3px solid #b87669;font-weight:700}.reminder-future{color:#777c73;background:#f7f7f2;border:1px solid #ebece5;font-weight:500}.reminder-off{color:#8a8c84;background:#f6f6f2;border:1px solid #ecece6;font-weight:500}
+/* 法式柔和提醒與無照片藥物圖示 */
+.photo-placeholder{width:64px;height:64px;min-width:64px;border-radius:13px;display:grid;place-items:center;background:#f3f2e9;color:#71806b;border:1px solid #e5e5d9}
+.photo-placeholder svg{width:39px;height:39px}
+.reminder-done{display:inline-flex;align-items:center;gap:7px;border-radius:9px;padding:7px 10px;line-height:1.5;color:#405d45;background:#e9f0e5;border:1px solid #d3dfcf;border-left:3px solid #81987a;font-weight:700}
+.reminder-due{color:#95584d;background:#f9ebe8;border-color:#ecd4cd;border-left-color:#bb8073;font-weight:700}
+.reminder-due .line-icon,.reminder-done .line-icon{width:18px;height:18px}
+.share-card-button{background:#e6ebe0;color:#3e5944;margin:8px 7px 8px 0}
+
+/* V16.3: iPhone 日期輸入框避免超出 grid 欄位，底部手勢保護 */
+.grid>div{min-width:0}.grid input[type="date"]{min-width:0;width:100%;display:block;-webkit-appearance:none}
+@media(max-width:600px){.history-date-grid{grid-template-columns:minmax(0,1fr);gap:0}.history-date-grid>div{min-width:0}}
+@supports(padding-bottom:env(safe-area-inset-bottom)){nav{padding-bottom:calc(22px + env(safe-area-inset-bottom))}}
+/* V16.4：結束日期與匯出按鈕間保留觸控間距 */
+.history-date-grid + .row{margin-top:20px}
+/* V16.5：未拆封庫存的新增按鈕與上方欄位保持 20px 距離 */
+.unopened-add-btn{margin-top:20px}
+/* V16.6 */
+.stock-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:12px 0}.stock-tabs button{font-size:12px;padding:11px 3px;background:#e9eee5;color:#455642}.stock-tabs button.active{background:#819178;color:#fff}.stock-filter{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.stock-filter select{width:auto;flex:1}.stock-actions{display:flex;gap:8px;flex-wrap:wrap}.stock-actions button{flex:1}.stock-warning{border-left:4px solid #b87669}.stock-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px}.stock-summary>div{background:#f4f6f0;padding:10px;border-radius:12px}.stock-summary strong{display:block;margin-top:4px}.stock-note{font-size:13px;color:#6b7569}
+</style></head><body><main><header><small>PERSONAL MEDICATION JOURNAL</small><h1>藥物使用紀錄</h1><label for="person">目前查看</label><select id="person"><option value="自己">自己</option></select><div class="row" style="margin-top:8px"><button class="secondary" onclick="addFamily()">＋ 新增家人</button><button class="secondary" onclick="renameFamily()">修改家人名稱</button></div><select id="unused" class="hidden"></select></header><section id="content"></section><section class="card"><h2>資料備份</h2><p class="muted">下載 JSON 備份檔，保存自己與家人的藥物、補給及服藥紀錄。檔案含個人健康資料，請妥善保管。</p><div class="row"><button class="secondary" onclick="exportData()">下載備份</button><button class="secondary" onclick="removeLegacySnapshot()">清理舊版升級快照</button><button class="secondary" onclick="document.getElementById('restoreFile').click()">還原備份</button></div><input class="hidden" type="file" id="restoreFile" accept=".json,application/json" onchange="importData(event)"></section></main><nav><button data-tab="today" class="active">今日用藥</button><button data-tab="meds">我的藥物</button><button data-tab="stock">庫存管理</button><button data-tab="history">歷史紀錄</button><button data-tab="reminders">用藥提醒</button></nav><script>
+const KEY='medication-journal-v1';
+const PRE_V16_BACKUP_KEY='medication-journal-v1-pre-v16-backup';
+let db,storageRecoveryMode=false;
+const rawAtStartup=localStorage.getItem(KEY);
+// 在擴充資料結構前，先保存第十五版原始資料；只建立一次，不覆蓋既有快照。
+// V16.1：不再自動建立大型 localStorage 快照。既有快照保留，須由使用者確認外部備份後自行移除。
+try{
+ db=rawAtStartup?JSON.parse(rawAtStartup):{meds:[],logs:[]};
+ if(!db || typeof db!=='object' || !Array.isArray(db.meds) || !Array.isArray(db.logs)) throw new Error('資料結構不完整');
+}catch(e){
+ storageRecoveryMode=true;
+ db={meds:[],logs:[]};
+ console.error('原有資料無法解析；已啟用保護模式，不會寫入或覆蓋原始資料。',e);
+}
+// 向後相容：舊版沒有的新欄位只補預設值，不重建或清空既有資料。
+if(!storageRecoveryMode){
+ db.families=Array.isArray(db.families)?db.families:[...new Set(db.meds.map(m=>m.person).filter(p=>p!=='自己'))];
+ db.restocks=Array.isArray(db.restocks)?db.restocks:[];
+ db.reminders=db.reminders&&typeof db.reminders==='object'&&!Array.isArray(db.reminders)?db.reminders:{};
+ db.reminderTimes=db.reminderTimes&&typeof db.reminderTimes==='object'&&!Array.isArray(db.reminderTimes)?db.reminderTimes:{};
+ db.allergies=Array.isArray(db.allergies)?db.allergies:[];
+ db.unopenedStocks=Array.isArray(db.unopenedStocks)?db.unopenedStocks:[];
+ db.purchaseNotes=db.purchaseNotes&&typeof db.purchaseNotes==='object'&&!Array.isArray(db.purchaseNotes)?db.purchaseNotes:{};
+ db.purchasePrices=db.purchasePrices&&typeof db.purchasePrices==='object'&&!Array.isArray(db.purchasePrices)?db.purchasePrices:{};
+}else{db.families=[];db.restocks=[];db.reminders={};db.reminderTimes={};db.allergies=[];db.unopenedStocks=[];db.purchaseNotes={};db.purchasePrices={};}
+let historyExportApproval=null;let tab='today';let lastPerson='自己';let medFilter='active',reminderMedFilter='active',reminderSwitchFilter='on',stockSection='overview',stockFilter='active',stockDrafts={},stockDirty=false,stockBatch=false,unopenedFormVisible=false;const $=id=>document.getElementById(id),person=()=> $('person').value;const today=()=>new Date().toLocaleDateString('sv-SE');
+function storageFailure(e){const quota=e?.name==='QuotaExceededError'||e?.code===22||e?.code===1014;return quota?'網站儲存空間不足（QuotaExceededError）。原有資料未被覆蓋。請確認外部 JSON 備份，再到「資料備份」清理舊版升級快照。':'資料寫入失敗（'+(e?.name||'未知錯誤')+'）。原有資料未被覆蓋，請保留 JSON 備份並回報錯誤名稱。'}
+const save=()=>{if(storageRecoveryMode){alert('為保護原有資料，目前已停止寫入。請先下載／保留原始資料並使用「還原備份」修復；請勿清除網站資料。');return false}try{const payload=JSON.stringify(db);localStorage.setItem(KEY,payload);if(localStorage.getItem(KEY)!==payload)throw new Error('WriteVerificationFailed');render();return true}catch(e){console.error('V16.1 儲存失敗',e);try{const previous=localStorage.getItem(KEY);if(previous){db=JSON.parse(previous);refreshPeople();render()}}catch(rollbackError){console.error('無法重新載入已儲存資料',rollbackError)}alert(storageFailure(e));return false}};
+function removeLegacySnapshot(){if(!localStorage.getItem(PRE_V16_BACKUP_KEY)){alert('目前沒有舊版升級快照需要清理。');return}if(!confirm('請先確認已將 JSON 備份檔存到「檔案」或其他安全位置。確定只移除瀏覽器內的舊版升級快照？不會刪除目前藥物與服藥紀錄。'))return;try{localStorage.removeItem(PRE_V16_BACKUP_KEY);alert('已移除舊版升級快照。原有藥物及紀錄未變更。')}catch(e){alert('清理失敗：'+(e.name||'未知錯誤'))}}
+async function compressMedicinePhoto(file){if(!file.type.startsWith('image/'))throw Error('請選擇圖片檔案');const url=URL.createObjectURL(file);try{const img=await new Promise((resolve,reject)=>{const im=new Image();im.onload=()=>resolve(im);im.onerror=()=>reject(Error('無法讀取圖片'));im.src=url});const limit=960,scale=Math.min(1,limit/Math.max(img.naturalWidth,img.naturalHeight));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));const ctx=canvas.getContext('2d');if(!ctx)throw Error('無法處理圖片');ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);return canvas.toDataURL('image/jpeg',0.76)}finally{URL.revokeObjectURL(url)}};
+const safe=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));const meds=()=>db.meds.filter(m=>m.person===person()&&m.active!==false);const allMeds=()=>db.meds.filter(m=>m.person===person());const low=m=>m.stock<=m.threshold||(m.type==='fixed'&&m.daily>0&&m.days>0&&m.stock/m.daily<=m.days);function medGlyph(m){
+ const key=String([m.name,m.info,m.unit].join(' '));let shape;
+ if(/膠囊|capsule/i.test(key))shape='<rect x="4" y="9" width="24" height="14" rx="7" transform="rotate(-38 16 16)"/><path d="M10.5 21.5 21.5 10.5"/>';
+ else if(/錠|片|tablet|鈣片/i.test(key))shape='<ellipse cx="16" cy="16" rx="11" ry="8"/><path d="M6 20 26 12"/>';
+ else if(/瓶|液|滴|水|糖漿/i.test(key))shape='<path d="M12 4h8v5h-8zM11 9h10l3 5v13H8V14z"/><path d="M11 19h10"/>';
+ else if(/包|粉|袋|益生菌/i.test(key))shape='<path d="M9 5h14l2 22H7z"/><path d="M11 10h10M12 15h8"/>';
+ else if(/膏|乳|霜/i.test(key))shape='<path d="M11 4h10l4 21H7zM7 25h18M12 10h8"/>';
+ else shape='<path d="M12 4h8v5h-8zM10 9h12l3 6v12H7V15z"/><path d="M11 19h10M16 14v10M12 19h8"/>';
+ return `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shape}</svg>`;
+}
+const pic=m=>m.photo?`<img class="photo" src="${m.photo}" alt="藥物照片">`:`<span class="photo-placeholder" role="img" aria-label="藥物預設線條圖示">${medGlyph(m)}</span>`;
+function lineMessage(m){
+ return `藥物庫存提醒\n使用者：${m.person}\n藥物：${m.name}`;
+}
+async function imageFile(m){
+ if(!m.photo)return null;
+ const response=await fetch(m.photo);
+ const blob=await response.blob();
+ const type=blob.type||'image/png';
+ const ext=type.includes('jpeg')?'jpg':type.includes('webp')?'webp':'png';
+ return new File([blob],`藥物照片.${ext}`,{type});
+}
+function shareText(m){
+ window.open('https://line.me/R/msg/text/?'+encodeURIComponent(lineMessage(m)),'_blank','noopener,noreferrer');
+}
+async function shareLine(id){
+ const m=db.meds.find(x=>x.id===id);
+ if(!m)return alert('找不到藥物。');
+ if(m.photo&&navigator.share){
+  try{
+   const file=await imageFile(m);
+   if(file&&navigator.canShare&&navigator.canShare({files:[file]})){
+    await navigator.share({text:lineMessage(m),files:[file]});
+    return;
+   }
+  }catch(e){
+   if(e.name==='AbortError')return;
+  }
+ }
+ shareText(m);
+ if(m.photo)alert('目前僅開啟文字分享。若要附上藥物圖片，請從藥物資料卡下載照片，再於 LINE 手動附加。');
+}
+function downloadMedPhoto(id){
+ const m=db.meds.find(x=>x.id===id);
+ if(!m?.photo)return alert('這筆藥物尚未上傳照片。');
+ const a=document.createElement('a');
+ a.href=m.photo;a.download='藥物照片.png';document.body.appendChild(a);a.click();a.remove();
+}
+function refreshPeople(){const el=$('person'),old=el.value;el.innerHTML=['自己',...db.families.filter(x=>x!=='自己')].map(x=>`<option value="${safe(x)}">${safe(x)}</option>`).join('');if([...el.options].some(o=>o.value===old))el.value=old;}
+function addFamily(){let name=prompt('請輸入家人名稱');if(name===null)return;name=name.trim();if(!name||name==='自己'||db.families.includes(name))return alert('名稱不可空白或重複。');db.families.push(name);refreshPeople();$('person').value=name;save()}
+function renameFamily(){let old=person();if(old==='自己')return alert('「自己」不能重新命名。');let name=prompt('修改家人名稱',old);if(name===null)return;name=name.trim();if(!name||name==='自己'||(name!==old&&db.families.includes(name)))return alert('名稱不可空白或重複。');db.families=db.families.map(x=>x===old?name:x);db.meds.forEach(m=>{if(m.person===old)m.person=name});db.allergies.forEach(a=>{if(a.person===old)a.person=name});db.unopenedStocks.forEach(x=>{if(x.person===old)x.person=name});if(db.purchaseNotes[old]!==undefined){db.purchaseNotes[name]=db.purchaseNotes[old];delete db.purchaseNotes[old]}$('person').value=old;refreshPeople();$('person').value=name;save()}
+const remaining=m=>m.type==='fixed'&&m.daily>0?Math.floor(m.stock/m.daily):null;
+function purchaseList(){
+ let selected=allMeds().filter(m=>document.getElementById('buy-'+m.id)?.checked);
+ if(!selected.length)return alert('請先勾選要購買的藥物。');
+ let lines=['藥物採購清單','使用者：'+person(),'日期：'+today(),'','待購藥物'];
+ for(let i=0;i<selected.length;i++){
+  let m=selected[i],qty=Number($('buyqty-'+m.id).value),unit=$('buyunit-'+m.id).value.trim();
+  if(!Number.isFinite(qty)||qty<=0||!unit)return alert('請填寫有效的購買數量與單位。');
+  lines.push(`${i+1}. ${m.name}：${qty} ${unit}`);
+ }
+ const note=String(db.purchaseNotes[person()]||'').trim();
+ lines.push('','採購說明',note||'（未填寫）');
+ return {text:lines.join('\n'),selected};
+}
+function priceKey(m){return JSON.stringify([m.person,m.id]);}
+function savePurchasePrice(id,value){
+ const m=db.meds.find(x=>String(x.id)===String(id)&&x.person===person());if(!m)return;
+ const raw=String(value??'').trim();if(raw!==''&&(!Number.isFinite(Number(raw))||Number(raw)<0))return alert('單價不可為負數。');
+ const key=priceKey(m),old=db.purchasePrices[key];
+ if(raw==='')delete db.purchasePrices[key];else db.purchasePrices[key]=raw;
+ if(!save()){if(old===undefined)delete db.purchasePrices[key];else db.purchasePrices[key]=old;}
+}
+function savePurchaseNote(value){db.purchaseNotes[person()]=value;if(save()){delete stockDrafts[person()+'|purchaseNote'];stockDirty=Object.keys(stockDrafts).some(k=>k.startsWith(person()+'|'))}}
+async function sharePurchaseCard(){
+ const result=purchaseList();if(!result)return;
+ if(navigator.share){try{await navigator.share({title:'藥物採購清單',text:result.text});return}catch(e){if(e.name==='AbortError')return}}
+ window.open('https://line.me/R/msg/text/?'+encodeURIComponent(result.text),'_blank','noopener,noreferrer');
+}
+// 保留舊版「LINE 分享採購文字／原始照片」：分享所勾選藥物的採購文字，並嘗試附上原始藥物照片。
+async function sharePurchaseTextOriginalPhotos(){
+ const result=purchaseList();if(!result)return;
+ const photoMeds=result.selected.filter(m=>m.photo);
+ if(!photoMeds.length){
+  window.open('https://line.me/R/msg/text/?'+encodeURIComponent(result.text),'_blank','noopener,noreferrer');
+  alert('已開啟採購文字分享；目前勾選的藥物沒有原始照片。');
+  return;
+ }
+ if(navigator.share){
+  try{
+   const files=[];
+   for(const m of photoMeds){const f=await imageFile(m);if(f)files.push(new File([f],`${String(m.name||'藥物').replace(/[\\/:*?"<>|]/g,'_')}_${f.name}`,{type:f.type||'image/png'}));}
+   if(files.length&&navigator.canShare&&navigator.canShare({files})){
+    await navigator.share({title:'藥物採購清單',text:result.text,files});
+    return;
+   }
+  }catch(e){if(e.name==='AbortError')return;}
+ }
+ window.open('https://line.me/R/msg/text/?'+encodeURIComponent(result.text),'_blank','noopener,noreferrer');
+ alert('已開啟採購文字分享。此瀏覽器無法將文字與多張原始照片一次附加至 LINE；請從各藥物資料卡下載照片，再於 LINE 手動附加。');
+}
+async function sharePurchase(){return sharePurchaseCard()}
+function toggleAllergyReminderField(){
+ const field=$('allergyReminderWrap');if(!field)return;
+ field.classList.toggle('hidden',$('allergyStatus')?.value!=='疑似反應');
+}
+function addAllergy(){
+ const name=$('allergyName').value.trim(),ingredient=$('allergyIngredient').value.trim(),note=$('allergyNote').value.trim(),status=$('allergyStatus').value;
+ const allergyPerson=$('allergyPerson').value.trim(),providedDate='';
+ const reminderContent=status==='疑似反應'?$('allergyReminderContent').value.trim():'';
+ if(!name&&!ingredient&&!note)return alert('請至少填寫藥物名稱、成分或反應備註其中一項。');
+ if(!allergyPerson)return alert('請填寫過敏者名稱。');
+ db.allergies.push({id:crypto.randomUUID(),person:person(),allergyPerson,providedDate,reminderContent,name,ingredient,note,status,createdAt:new Date().toISOString()});save();
+}
+function deleteAllergy(id){if(!confirm('確定刪除此筆過敏史紀錄？'))return;db.allergies=db.allergies.filter(a=>a.id!==id);save()}
+function allergyProvidedDate(a){return today()} // 分享或匯出當下的系統日期
+function allergyPersonName(a){return String(a.allergyPerson||'').trim()||'未填寫'}
+function shareAllergies(){
+ const list=db.allergies.filter(a=>a.person===person());if(!list.length)return alert('目前沒有過敏史紀錄可分享。');
+ const lines=['藥物過敏史紀錄','','提醒：本清單為個人紀錄，疑似反應不代表已確診。'];
+ list.forEach((a,i)=>{
+  lines.push('',`${i+1}. ${a.name||'未填藥名'}`,`過敏者：${allergyPersonName(a)}`,`提供日期：${allergyProvidedDate(a)}`);
+  if(String(a.ingredient||'').trim())lines.push(`藥物成分：${a.ingredient.trim()}`);
+  lines.push(`紀錄狀態：${a.status||'未註明'}`,`反應／備註：${a.note||'未填寫'}`);
+  if(a.status==='疑似反應'&&a.reminderContent)lines.push(`提醒內容：${a.reminderContent}`);
+ });
+ const text=lines.join('\n');if(navigator.share){navigator.share({title:'藥物過敏史紀錄',text}).catch(e=>{if(e.name!=='AbortError')window.open('https://line.me/R/msg/text/?'+encodeURIComponent(text),'_blank','noopener,noreferrer')});return}window.open('https://line.me/R/msg/text/?'+encodeURIComponent(text),'_blank','noopener,noreferrer');
+}
+// V16.4：直接產生 PDF 檔案，不再開啟新視窗或呼叫 window.print()。
+function allergyPdfLines(list){
+ const lines=['藥物過敏史紀錄','','提醒：本清單供就醫溝通參考；疑似反應不代表已確診。',''];
+ list.forEach((a,i)=>{
+  lines.push((i+1)+'. '+(a.name||'未填藥名'));
+  lines.push('過敏者：'+allergyPersonName(a));
+  lines.push('提供日期：'+allergyProvidedDate(a));
+  if(String(a.ingredient||'').trim())lines.push('藥物成分：'+a.ingredient.trim());
+  lines.push('紀錄狀態：'+(a.status||'未註明'));
+  lines.push('反應／備註：'+(a.note||'未填寫'));
+  if(a.status==='疑似反應'&&a.reminderContent)lines.push('提醒內容：'+a.reminderContent);
+  lines.push('');
+ });
+ return lines;
+}
+async function exportAllergiesPDF(){
+ const list=db.allergies.filter(a=>a.person===person());
+ if(!list.length)return alert('目前沒有過敏史紀錄可匯出。');
+ try{
+  const pdf=await makeHistoryPdf(null,allergyPdfLines(list));
+  const filename='Medication_Allergy_'+today()+'.pdf';
+  const url=URL.createObjectURL(pdf);
+  const a=document.createElement('a');a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),120000);
+  alert('已產生過敏史 PDF。請至「檔案」App 確認是否成功保存。');
+ }catch(e){console.error('過敏史 PDF 匯出失敗',e);alert('產生過敏史 PDF 失敗：'+e.message+'。原始資料未變更。')}
+}
+// V16.6：庫存異動先在獨立草稿中驗證，再一次寫入本機儲存。
+function inventoryTransaction(mutator){if(storageRecoveryMode)return alert('資料保護模式禁止修改。');let next;try{next=JSON.parse(JSON.stringify(db));mutator(next);const data=JSON.stringify(next);localStorage.setItem(KEY,data);if(localStorage.getItem(KEY)!==data)throw Error('WriteVerificationFailed');db=next;stockDirty=false;stockDrafts={};render();return true}catch(e){console.error('庫存交易失敗',e);alert('操作未完成，庫存及紀錄未變更：'+(e.message||e.name));return false}}
+const roundQty=n=>Math.round(n*10000)/10000;
+const validQty=n=>Number.isFinite(n)&&n>=0&&Math.abs(n-roundQty(n))<0.0000001;
+function stockMeds(){return allMeds().filter(m=>stockFilter==='all'||(stockFilter==='active'?m.active!==false:m.active===false))}
+function stockDraft(mark=true){if(!document.querySelector('#content input[id^="restock-"],#content input[id^="buy"],#content input[id^="unopened"],#content textarea#purchaseNote'))return;for(const el of document.querySelectorAll('#content input,#content textarea,#content select')){if(el.id&&(el.id.startsWith('restock-')||el.id.startsWith('buy')||el.id.startsWith('unopened')||el.id==='purchaseNote'))stockDrafts[person()+'|'+el.id]=el.type==='checkbox'?el.checked:el.value;}if(mark)stockDirty=true}
+function stockValue(id,defaultValue=''){const key=person()+'|'+id;return Object.prototype.hasOwnProperty.call(stockDrafts,key)?stockDrafts[key]:defaultValue}
+function stockRestore(){for(const [key,value] of Object.entries(stockDrafts)){const prefix=person()+'|';if(!key.startsWith(prefix))continue;const el=$(key.slice(prefix.length));if(el){if(el.type==='checkbox')el.checked=!!value;else el.value=value}}}
+function stockSwitch(section){stockDraft(false);stockSection=section;render()}
+function stockChangeFilter(value){stockDraft(false);stockFilter=value;render()}
+function stockExit(){if(stockDirty&&!confirm('庫存管理還有未儲存的輸入內容。確定放棄變更並離開？'))return false;stockDrafts={};stockDirty=false;return true}
+function stockSelect(id){return `<select id="${id}" onchange="stockDraft()">${stockMeds().map(m=>`<option value="${safe(m.id)}">${safe(m.name)}${m.active===false?'（已停用）':''}</option>`).join('')}</select>`}
+function stockPanel(){let out=`<h2>庫存管理</h2><div class="stock-tabs">${[['overview','庫存總覽'],['supply','補給管理'],['unopened','未拆封藥物'],['buy','待購清單']].map(([k,v])=>`<button class="${stockSection===k?'active':''}" onclick="stockSwitch('${k}')">${v}</button>`).join('')}</div><div class="card"><label>藥物使用狀態</label><select onchange="stockChangeFilter(this.value)"><option value="active" ${stockFilter==='active'?'selected':''}>使用中</option><option value="inactive" ${stockFilter==='inactive'?'selected':''}>已停用</option><option value="all" ${stockFilter==='all'?'selected':''}>全部</option></select></div>`;
+const list=stockMeds();
+if(stockSection==='overview'){for(const m of [...list].sort((a,b)=>Number(low(b))-Number(low(a))||(remaining(a)??999999)-(remaining(b)??999999))){const unopened=db.unopenedStocks.filter(x=>x.person===person()&&x.medId===m.id).reduce((n,x)=>n+Number(x.remainingUnits||0),0),days=remaining(m);out+=`<div class="card"><div class="row"><strong>${safe(m.name)} ${m.active===false?'（已停用）':''}</strong><span class="${low(m)?'warn':'muted'}">${low(m)?'庫存需留意':'正常'}</span></div><div class="stock-summary"><div><span class="muted">使用中庫存</span><strong>${safe(m.stock)} ${safe(m.unit)}</strong><span class="muted">${days===null?'無法估算天數':'約剩 '+days+' 天'}</span></div><div><span class="muted">未拆封庫存</span><strong>${roundQty(unopened)} ${safe(m.unit)}</strong><span class="muted">不計入剩餘天數</span></div></div></div>`}}
+if(stockSection==='supply'){out+=`<p class="muted">實際收到藥物後才登記補給。可切換批次補給。</p><div class="stock-actions"><button class="secondary" onclick="stockDraft(false);stockBatch=!stockBatch;render()">${stockBatch?'改為單筆補給':'切換批次補給'}</button></div>`;const selected=stockBatch?list:list.slice(0,0);if(!stockBatch){out+=`<div class="card"><label>選擇藥物</label>${stockSelect('supplyMed')}<label>新增補給數量</label><input id="restock-single" type="number" min="0" step="0.0001" oninput="stockDraft()" placeholder="實際收到的數量"><button style="margin-top:12px" onclick="confirmRestocks()">確認補給</button></div>`}else{for(const m of selected)out+=`<div class="card"><strong>${safe(m.name)}</strong><div class="muted">目前庫存 ${m.stock} ${safe(m.unit)}</div><label>新增補給數量</label><input id="restock-${m.id}" type="number" min="0" step="0.0001" value="0" oninput="stockDraft()"></div>`;out+='<button onclick="confirmRestocks()">確認批次補給</button>'}out+='<h3>補給紀錄更正</h3><p class="muted">更正將同步調整庫存，並保留更正歷史。舊版未拆封轉入紀錄若來源不足，不能直接更正。</p>';for(const r of db.restocks.filter(r=>list.some(m=>m.id===r.medId)).slice().reverse().slice(0,60)){const m=db.meds.find(m=>m.id===r.medId);out+=`<div class="card"><strong>${safe(m?.name||'藥物')}</strong><div class="muted">${safe(r.at||'')} · ${safe(r.qty)} ${safe(m?.unit||'')} · ${r.source==='unopened-transfer'?'未拆封轉入':'一般補給'}</div><button class="secondary" onclick="correctRestock('${safe(r.id)}')">更正數量</button></div>`}}
+if(stockSection==='unopened'){out+=`<p class="muted">實際剩餘數量優先顯示。過期批次轉入前會警告，過期藥物不建議使用。</p><button class="secondary" onclick="stockDraft(false);unopenedFormVisible=!unopenedFormVisible;render()">${unopenedFormVisible?'收合新增表單':'＋ 新增未拆封藥物'}</button>`;if(unopenedFormVisible)out+=`<div class="card"><label>藥物</label>${stockSelect('unopenedMed')}<div class="grid"><div><label>包裝數量</label><input id="unopenedQty" type="number" min="0.0001" step="any" value="1" oninput="stockDraft()"></div><div><label>包裝單位</label><input id="unopenedUnit" value="盒" oninput="stockDraft()"></div><div><label>每包裝含量（庫存單位）</label><input id="unopenedPerPack" type="number" min="0.0001" step="any" value="30" oninput="stockDraft()"></div><div><label>有效期限</label><input id="unopenedExpiry" type="date" onchange="stockDraft()"></div></div><button class="unopened-add-btn" onclick="addUnopened()">新增未拆封藥物</button></div>`;for(const x of db.unopenedStocks.filter(x=>x.person===person()&&list.some(m=>m.id===x.medId))){const m=db.meds.find(m=>m.id===x.medId);const expired=x.expiry&&x.expiry<today();out+=`<div class="card ${expired?'stock-warning':''}"><div class="row"><strong>${safe(m.name)}</strong><span class="${expired?'warn':'muted'}">${expired?'已過期':'原批次'}</span></div><p>剩餘 <strong>${roundQty(x.remainingUnits)} ${safe(m.unit)}</strong><br><span class="muted">相當於 ${roundQty(x.remainingUnits/x.perPack)} ${safe(x.unit)} · 有效期限：${safe(x.expiry||'未填寫')}</span></p><div class="stock-actions"><button onclick="transferUnopened('${x.id}')">手動轉入</button><button class="secondary" onclick="deleteUnopened('${x.id}')">刪除</button></div></div>`}}
+if(stockSection==='buy'){out+='<p class="muted">價格只保存在 App，不會出現在採購分享中。勾選不會修改庫存。</p>';for(const m of list)out+=`<div class="card"><label><input style="width:auto" type="checkbox" id="buy-${m.id}" onchange="stockDraft()"> <strong>${safe(m.name)}${m.active===false?'（已停用）':''}</strong></label><div class="grid"><div><label>購買數量</label><input type="number" min="0.001" step="any" id="buyqty-${m.id}" value="${Number(m.buyQty)||1}" oninput="stockDraft()"></div><div><label>購買單位</label><input id="buyunit-${m.id}" value="${safe(m.buyUnit||'盒')}" oninput="stockDraft()"></div><div class="full"><label>單價（NT$，選填）</label><input type="number" min="0" step="any" id="buyprice-${m.id}" value="${safe(db.purchasePrices[priceKey(m)]??'')}" onchange="savePurchasePrice('${m.id}',this.value)"></div></div></div>`;out+=`<div class="card"><label>採購說明（選填）</label><textarea id="purchaseNote" placeholder="輸入採購說明" oninput="stockDraft()">${safe(db.purchaseNotes[person()]||'')}</textarea><button class="secondary" style="margin-top:10px" onclick="savePurchaseNote($('purchaseNote').value)">儲存採購說明</button></div><div class="stock-actions"><button onclick="sharePurchaseCard()">分享採購卡片（純文字）</button><button class="secondary" onclick="sharePurchaseTextOriginalPhotos()">LINE 分享採購文字／原始照片</button></div>`}
+if(!list.length)out+='<div class="card">目前篩選條件下沒有藥物。</div>';return out}
+function addUnopened(){const medId=$('unopenedMed')?.value,m=db.meds.find(m=>m.id===medId&&m.person===person());const packages=Number($('unopenedQty')?.value),unit=$('unopenedUnit')?.value.trim(),per=Number($('unopenedPerPack')?.value),expiry=$('unopenedExpiry')?.value;if(!m||!unit||!validQty(packages)||packages<=0||!validQty(per)||per<=0||!validQty(packages*per))return alert('請填寫有效的藥物、包裝及含量，最多四位小數。');if(m.active===false&&!confirm('這項藥物已停用。確定仍要新增未拆封庫存？'))return;inventoryTransaction(next=>next.unopenedStocks.push({id:crypto.randomUUID(),person:person(),medId,packages,unit,perPack:per,remainingUnits:roundQty(packages*per),expiry,createdAt:new Date().toISOString()}))}
+function transferUnopened(id){const x=db.unopenedStocks.find(x=>x.id===id&&x.person===person()),m=db.meds.find(m=>m.id===x?.medId&&m.person===person());if(!x||!m)return alert('找不到來源批次或藥物。');const raw=prompt(`轉入多少 ${m.unit}？目前剩餘 ${x.remainingUnits} ${m.unit}`,String(Math.min(x.remainingUnits,x.perPack)));if(raw===null)return;const qty=Number(raw);if(!validQty(qty)||qty<=0||qty>x.remainingUnits)return alert('轉入數量不正確。');if(x.expiry&&x.expiry<today()&&!confirm('警告：此批次已過期，可能有品質或效力風險，不建議使用。仍要記錄轉入庫存嗎？'))return;if(m.active===false&&!confirm('藥物已停用，轉入不會重新啟用。確定繼續？'))return;if(!confirm(`確認轉入 ${qty} ${m.unit}？`))return;inventoryTransaction(next=>{const y=next.unopenedStocks.find(v=>v.id===id),n=next.meds.find(v=>v.id===m.id);if(!y||!n||qty>y.remainingUnits)throw Error('批次數量已變更');const originalTotal=roundQty(x.originalTotal??(x.remainingUnits+db.restocks.filter(r=>r.sourceBatchId===id).reduce((a,r)=>a+r.qty,0)));n.stock=roundQty(n.stock+qty);y.remainingUnits=roundQty(y.remainingUnits-qty);y.packages=roundQty(y.remainingUnits/y.perPack);next.restocks.push({id:crypto.randomUUID(),medId:m.id,qty,at:new Date().toISOString(),source:'unopened-transfer',sourceBatchId:id,sourceSnapshot:{person:x.person,medId:x.medId,unit:x.unit,perPack:x.perPack,expiry:x.expiry,createdAt:x.createdAt,originalTotal},expiredAtTransfer:!!(x.expiry&&x.expiry<today()),corrections:[]});if(y.remainingUnits===0)next.unopenedStocks=next.unopenedStocks.filter(v=>v.id!==id)})}
+function deleteUnopened(id){const x=db.unopenedStocks.find(x=>x.id===id);if(!x)return;if(db.restocks.some(r=>r.sourceBatchId===id))return alert('此批次已有轉入紀錄，為避免更正衝突，不能直接刪除。');if(!confirm('確定刪除這筆未拆封庫存？'))return;inventoryTransaction(next=>{next.unopenedStocks=next.unopenedStocks.filter(x=>x.id!==id)})}
+function confirmRestocks(){let updates=[];if(stockBatch){for(const m of stockMeds()){const q=Number($('restock-'+m.id)?.value||0);if(!validQty(q))return alert('補給數量無效，最多四位小數。');if(q>0)updates.push({id:m.id,q})}}else{const id=$('supplyMed')?.value,q=Number($('restock-single')?.value);if(!validQty(q)||q<=0)return alert('請輸入有效補給數量。');updates.push({id,q})}if(!updates.length)return alert('請輸入補給數量。');if(updates.some(x=>db.meds.find(m=>m.id===x.id)?.active===false)&&!confirm('包含已停用藥物，補給不會重新啟用。確定繼續？'))return;const summary=updates.map(x=>{const m=db.meds.find(m=>m.id===x.id);return `${m.name}：${m.stock} + ${x.q} = ${roundQty(m.stock+x.q)} ${m.unit}`}).join('\n');if(!confirm('確認已實際收到藥物？\n'+summary))return;inventoryTransaction(next=>{for(const x of updates){const m=next.meds.find(m=>m.id===x.id);if(!m)throw Error('找不到藥物');m.stock=roundQty(m.stock+x.q);next.restocks.push({id:crypto.randomUUID(),medId:m.id,qty:x.q,at:new Date().toISOString(),source:'manual',corrections:[]})}})}
+function correctRestock(id){const r=db.restocks.find(r=>r.id===id),m=db.meds.find(m=>m.id===r?.medId);if(!r||!m)return alert('找不到補給紀錄。');const raw=prompt(`更正「${m.name}」補給數量（目前 ${r.qty} ${m.unit}，可輸入 0）`,String(r.qty));if(raw===null)return;const qty=Number(raw);if(!validQty(qty))return alert('更正數量須為非負數，最多四位小數。');if(qty===r.qty)return;const delta=roundQty(qty-r.qty);if(roundQty(m.stock+delta)<0)return alert('更正後使用中庫存會變成負數，請先核對庫存與服藥紀錄。');const transfer=r.source==='unopened-transfer';let snapshot=r.sourceSnapshot,batchId=r.sourceBatchId;if(transfer&&(!batchId||!snapshot||!validQty(snapshot.originalTotal)||!snapshot.perPack))return alert('舊版轉入紀錄缺少完整來源資料，為避免庫存衝突，不能直接更正。');if(transfer){const related=db.restocks.filter(x=>x.sourceBatchId===batchId&&x.source==='unopened-transfer');const total=roundQty(related.reduce((n,x)=>n+(x.id===id?qty:x.qty),0));if(total>snapshot.originalTotal||total<0)return alert('更正後超過原批次總量。');const current=db.unopenedStocks.find(x=>x.id===batchId);if(current&&(current.medId!==m.id||current.person!==snapshot.person))return alert('來源批次不一致，已停止更正。');}if(!confirm(`確認將補給數量 ${r.qty} 改為 ${qty} ${m.unit}？\n使用中庫存 ${m.stock} → ${roundQty(m.stock+delta)}`))return;inventoryTransaction(next=>{const rr=next.restocks.find(x=>x.id===id),mm=next.meds.find(x=>x.id===m.id);mm.stock=roundQty(mm.stock+delta);if(mm.stock<0)throw Error('更正後庫存不足');if(transfer){const related=next.restocks.filter(x=>x.sourceBatchId===batchId&&x.source==='unopened-transfer'),total=roundQty(related.reduce((n,x)=>n+(x.id===id?qty:x.qty),0)),remaining=roundQty(snapshot.originalTotal-total);if(remaining<0)throw Error('來源批次剩餘不足');let batch=next.unopenedStocks.find(x=>x.id===batchId);if(remaining===0){next.unopenedStocks=next.unopenedStocks.filter(x=>x.id!==batchId)}else if(batch){batch.remainingUnits=remaining;batch.packages=roundQty(remaining/batch.perPack)}else{next.unopenedStocks.push({id:batchId,person:snapshot.person,medId:snapshot.medId,unit:snapshot.unit,perPack:snapshot.perPack,expiry:snapshot.expiry,createdAt:snapshot.createdAt,originalTotal:snapshot.originalTotal,remainingUnits:remaining,packages:roundQty(remaining/snapshot.perPack)})}}rr.corrections=Array.isArray(rr.corrections)?rr.corrections:[];rr.corrections.push({before:rr.qty,after:qty,at:new Date().toISOString()});rr.qty=qty})}
+function requestNotifications(){if(!('Notification' in window))return alert('此裝置或瀏覽器不支援通知。');Notification.requestPermission().then(x=>alert('通知權限：'+x+'。這不是背景推播啟用確認；仍需另外建置推播服務。'))}
+// 本機提醒設定只針對「自己」，不因查看其他家人而變更。
+function reminderKey(m){return String(m.id)}
+function reminderEnabled(m){return db.reminders[reminderKey(m)]!==false}
+function setReminder(id,enabled){db.reminders[id]=enabled;save()}
+function reminderTimes(m){
+ const id=reminderKey(m),stored=db.reminderTimes[id];
+ if(Array.isArray(stored))return stored.filter(t=>/^([01]\d|2[0-3]):[0-5]\d$/.test(t)).sort();
+ return String(m.times||'').split(',').map(t=>t.trim()).filter(t=>/^([01]\d|2[0-3]):[0-5]\d$/.test(t));
+}
+function addReminderTime(id){
+ const input=document.getElementById('new-time-'+id),t=input?.value;
+ if(!t||!/^([01]\d|2[0-3]):[0-5]\d$/.test(t))return alert('請選擇有效的提醒時間');
+ const m=db.meds.find(x=>String(x.id)===String(id));if(!m||m.person!=='自己')return;
+ const a=reminderTimes(m);if(a.includes(t))return alert('這個時間已經設定過了');
+ db.reminderTimes[id]=[...a,t].sort();save();
+}
+function removeReminderTime(id,t){
+ const m=db.meds.find(x=>String(x.id)===String(id));if(!m||m.person!=='自己')return;
+ db.reminderTimes[id]=reminderTimes(m).filter(x=>x!==t);save();
+}
+function editReminderTime(id,oldTime,idx){
+ const input=document.getElementById('edit-time-'+id+'-'+idx),t=input?.value;
+ if(!t||!/^([01]\d|2[0-3]):[0-5]\d$/.test(t))return alert('請選擇有效的提醒時間');
+ const m=db.meds.find(x=>String(x.id)===String(id));if(!m||m.person!=='自己')return;
+ const a=reminderTimes(m);if(t!==oldTime&&a.includes(t))return alert('這個時間已經設定過了');
+ db.reminderTimes[id]=a.map(x=>x===oldTime?t:x).sort();save();
+}
+function ownFixedMeds(){return db.meds.filter(m=>m.person==='自己'&&m.active!==false&&m.type==='fixed')}
+function lineIcon(name){const shapes={"bell": "<path d=\"M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z\"/><path d=\"M10 21h4\"/>", "clock": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 7v5l3 2\"/>", "check": "<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m8 12 2.7 2.7L16 9\"/>", "off": "<path d=\"M18 8a6 6 0 0 0-10-4.5M6 8c0 7-3 7-3 9h14M10 21h4M3 3l18 18\"/>"};return `<svg class="line-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${shapes[name]||shapes.clock}</svg>`}
+function reminderPanel(){
+ let list=db.meds.filter(m=>m.person==='自己'&&m.type==='fixed'&&(reminderMedFilter==='all'||(reminderMedFilter==='active'?m.active!==false:m.active===false))&&(reminderSwitchFilter==='all'||(reminderSwitchFilter==='on'?reminderEnabled(m):!reminderEnabled(m)))),out='<h2 class="reminder-heading">'+lineIcon('bell')+' 每日用藥提醒（僅限自己）</h2><div class="card"><strong>提醒對象固定為「自己」</strong><p class="muted">不論上方切換查看哪位家人，此頁只顯示本機「自己」的固定用藥。設定會保存在這支手機。</p><p class="muted">目前提供 App 內到時／逾時提示及提醒開關。iPhone 關閉 App 後的背景推播尚未啟用，不能依賴本功能作為唯一服藥提醒。</p><button class="secondary" onclick="requestNotifications()">檢查通知權限（非啟用背景推播）</button></div>';
+ out+=`<div class="card grid"><div><label>藥物使用狀態</label><select onchange="reminderMedFilter=this.value;render()"><option value="active" ${reminderMedFilter==='active'?'selected':''}>使用中</option><option value="inactive" ${reminderMedFilter==='inactive'?'selected':''}>已停用</option><option value="all" ${reminderMedFilter==='all'?'selected':''}>全部</option></select></div><div><label>提醒狀態</label><select onchange="reminderSwitchFilter=this.value;render()"><option value="on" ${reminderSwitchFilter==='on'?'selected':''}>已開啟提醒</option><option value="off" ${reminderSwitchFilter==='off'?'selected':''}>未開啟提醒</option><option value="all" ${reminderSwitchFilter==='all'?'selected':''}>全部</option></select></div></div>`;if(!list.length)return out+'<div class="card">目前篩選條件下沒有藥物。</div>';
+ let now=new Date(),clock=now.toTimeString().slice(0,5);
+ for(const m of list){
+  let times=reminderTimes(m),on=reminderEnabled(m);
+  let entries=times.map((t,i)=>{
+   // 提醒時段與原服藥時段分開；不可把提醒狀態誤認為服藥確認。
+   // 只有同一藥物、同一天、同一原始服藥時段的確認紀錄，才標示為已服藥。
+   const done=db.logs.some(l=>String(l.medId)===String(m.id)&&l.date===today()&&l.slot===t);
+   let due=on&&m.active!==false&&t<=clock;let state=m.active===false?'藥物已停用，暫停提醒':!on?'提醒已關閉':done?'已完成服藥':due?'已到提醒時間，請確認是否服藥':'尚未到提醒時間';let stateClass=m.active===false?'reminder-off':!on?'reminder-off':done?'reminder-done':due?'reminder-due':'reminder-future';let statusIcon=lineIcon(!on?'off':done?'check':due?'bell':'clock');
+   return `<div class="muted" style="margin:7px 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap"><input aria-label="提醒時間" type="time" id="edit-time-${m.id}-${i}" value="${safe(t)}" style="width:130px"><button class="secondary" onclick="editReminderTime('${m.id}','${t}',${i})">修改</button><button class="secondary" onclick="removeReminderTime('${m.id}','${t}')">刪除</button><span class="${stateClass}" role="status">${statusIcon}<span>${state}</span></span></div>`;
+  }).join('');
+  out+=`<div class="card medrow">${pic(m)}<div style="flex:1;min-width:0"><strong>${safe(m.name)}</strong><div class="muted">每次 ${safe(m.dose)} ${safe(m.unit)}</div>${entries||'<div class="muted">請設定提醒時間</div>'}<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px"><input type="time" aria-label="新增提醒時間" id="new-time-${m.id}" value="08:00" style="width:130px"><button class="secondary" onclick="addReminderTime('${m.id}')">＋ 新增時間</button></div></div><label style="white-space:nowrap"><input type="checkbox" style="width:auto" ${on?'checked':''} onchange="setReminder('${m.id}',this.checked)"> 提醒</label></div>`;
+ }
+ return out+'<p class="muted">提醒時間獨立於原服藥排程，不會自動新增服藥紀錄或扣庫存。只有提醒時間與「今日用藥」已確認的原服藥時段一致，才顯示綠色「已完成服藥」；其他時段仍須到「今日用藥」確認。App 關閉後尚無背景推播。</p>';
+}
+// V16.2：先列印／另存 PDF，再由使用者確認保存後才允許刪除同一批紀錄。
+function historyDate(l){return String(l.date||l.at||'').slice(0,10);}
+function historySelection(){
+ const from=$('historyFrom')?.value||'',to=$('historyTo')?.value||'';
+ if(from&&to&&from>to)throw Error('開始日期不可晚於結束日期。');
+ const ids=new Set(allMeds().map(m=>m.id));
+ const logs=db.logs.filter(l=>ids.has(l.medId)&&(!from||historyDate(l)>=from)&&(!to||historyDate(l)<=to)).sort((a,b)=>String(a.at).localeCompare(String(b.at)));
+ return {from,to,logs,owner:person()};
+}
+function resetHistoryExport(){historyExportApproval=null;const gate=$('historyExportGate');if(gate)gate.classList.add('hidden');}
+function updateHistoryDeleteButton(){const btn=$('historyDeleteBtn');if(btn)btn.disabled=!($('historyPdfSaved')?.checked&&historyExportApproval);}
+// V16.3：在目前頁面以 Canvas 產生含繁體中文字形的 PDF，避免 iPhone PWA 卡在列印預覽。
+function pdfTextLines(selection){
+ const lines=['服藥歷史紀錄','目前查看：'+selection.owner,'日期範圍：'+(selection.from||'不限')+' ～ '+(selection.to||'不限'),'紀錄筆數：'+selection.logs.length,''];
+ for(const l of selection.logs){
+  const m=db.meds.find(m=>m.id===l.medId);
+  lines.push('日期時間：'+String(l.at||l.date||'').replace('T',' '));
+  lines.push('藥物：'+(m?.name||'已刪除藥物')+'　服用量：'+String(l.qty??'')+' '+(m?.unit||''));
+  lines.push('狀態：'+(l.slot?'已確認（'+l.slot+'）':'已記錄'));
+  lines.push('');
+ }
+ lines.push('本 PDF 為使用者自行記錄的服藥歷史。');
+ return lines;
+}
+function wrapPdfLine(ctx,line,maxWidth){
+ if(!line)return [''];
+ const result=[];let current='';
+ for(const ch of String(line)){
+  if(current&&ctx.measureText(current+ch).width>maxWidth){result.push(current);current=ch}
+  else current+=ch;
+ }
+ if(current)result.push(current);
+ return result;
+}
+async function makeHistoryPdf(selection,customLines){
+ const W=1240,H=1754,margin=90,top=110,bottom=100,lineHeight=47;
+ const canvas=document.createElement('canvas');canvas.width=W;canvas.height=H;
+ const ctx=canvas.getContext('2d');if(!ctx)throw Error('此裝置無法使用 PDF 繪圖功能。');
+ ctx.font='29px -apple-system, "Noto Sans TC", sans-serif';
+ const lines=(customLines||pdfTextLines(selection)).flatMap(s=>wrapPdfLine(ctx,s,W-margin*2));
+ const maxLines=Math.floor((H-top-bottom)/lineHeight),pages=[];
+ for(let i=0;i<lines.length;i+=maxLines){
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#304234';ctx.font='29px -apple-system, "Noto Sans TC", sans-serif';
+  const pageLines=lines.slice(i,i+maxLines);
+  pageLines.forEach((s,j)=>ctx.fillText(s,margin,top+j*lineHeight));
+  ctx.font='21px -apple-system, "Noto Sans TC", sans-serif';ctx.fillStyle='#798476';
+  ctx.fillText('藥物使用紀錄 · 第 '+(pages.length+1)+' 頁',margin,H-52);
+  const data=canvas.toDataURL('image/jpeg',0.82).split(',')[1];
+  const binary=atob(data),bytes=new Uint8Array(binary.length);
+  for(let k=0;k<binary.length;k++)bytes[k]=binary.charCodeAt(k);
+  pages.push(bytes);
+ }
+ const enc=new TextEncoder(),chunks=[],offsets=[0];let pos=0;
+ const push=bytes=>{chunks.push(bytes);pos+=bytes.length};
+ const ascii=s=>push(enc.encode(s));
+ const obj=(id,body)=>{offsets[id]=pos;ascii(id+' 0 obj\n'+body+'\nendobj\n')};
+ ascii('%PDF-1.4\n');
+ const n=pages.length;
+ obj(1,'<< /Type /Catalog /Pages 2 0 R >>');
+ obj(2,'<< /Type /Pages /Kids ['+pages.map((_,i)=>(3+i*3)+' 0 R').join(' ')+'] /Count '+n+' >>');
+ pages.forEach((bytes,i)=>{
+  const pageId=3+i*3,imgId=pageId+1,contentId=pageId+2;
+  obj(pageId,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /XObject << /Im0 '+imgId+' 0 R >> >> /Contents '+contentId+' 0 R >>');
+  offsets[imgId]=pos;
+  ascii(imgId+' 0 obj\n<< /Type /XObject /Subtype /Image /Width '+W+' /Height '+H+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+bytes.length+' >>\nstream\n');
+  push(bytes);ascii('\nendstream\nendobj\n');
+  const stream='q\n595 0 0 842 0 0 cm\n/Im0 Do\nQ\n';
+  obj(contentId,'<< /Length '+enc.encode(stream).length+' >>\nstream\n'+stream+'endstream');
+ });
+ const xref=pos;
+ ascii('xref\n0 '+(3+n*3)+'\n0000000000 65535 f \n');
+ for(let i=1;i<3+n*3;i++)ascii(String(offsets[i]).padStart(10,'0')+' 00000 n \n');
+ ascii('trailer\n<< /Size '+(3+n*3)+' /Root 1 0 R >>\nstartxref\n'+xref+'\n%%EOF');
+ return new Blob(chunks,{type:'application/pdf'});
+}
+async function exportHistoryPDF(){
+ let selection;try{selection=historySelection()}catch(e){return alert(e.message)}
+ resetHistoryExport();
+ if(!selection.logs.length)return alert('所選日期範圍沒有服藥紀錄。');
+ const btn=$('historyExportBtn');if(btn)btn.disabled=true;
+ try{
+  const pdf=await makeHistoryPdf(selection);
+  const filename='Medication_History_'+today()+'.pdf';
+  const url=URL.createObjectURL(pdf);
+  const a=document.createElement('a');a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),120000);
+  historyExportApproval={owner:selection.owner,from:selection.from,to:selection.to,ids:selection.logs.map(l=>l.id)};
+  $('historyExportGate').classList.remove('hidden');$('historyPdfSaved').checked=false;updateHistoryDeleteButton();
+  alert('已產生 PDF 下載。請先在「檔案」App 確認 PDF 已成功保存，返回此畫面後再勾選確認，才能刪除紀錄。');
+ }catch(e){console.error(e);alert('產生 PDF 失敗：'+e.message+'。原始服藥紀錄沒有刪除。')}
+ finally{if(btn)btn.disabled=false}
+}
+function deleteExportedHistory(){
+ const a=historyExportApproval;if(!a||!$('historyPdfSaved')?.checked)return alert('請先匯出 PDF 並確認已保存。');
+ let current;try{current=historySelection()}catch(e){return alert(e.message)}
+ const nowIds=current.logs.map(l=>l.id);
+ if(current.owner!==a.owner||current.from!==a.from||current.to!==a.to||nowIds.length!==a.ids.length||nowIds.some((id,i)=>id!==a.ids[i])){resetHistoryExport();return alert('服藥紀錄或篩選範圍已改變，請重新匯出 PDF。')}
+ if(!confirm(`確定刪除「${a.owner}」已匯出的 ${a.ids.length} 筆服藥紀錄？\n刪除後無法在 App 內復原，且不會補回庫存。`))return;
+ const set=new Set(a.ids),previous=db.logs;
+ db.logs=db.logs.filter(l=>!set.has(l.id));
+ if(save()){historyExportApproval=null;alert('已刪除 '+set.size+' 筆服藥歷史紀錄。')}else{db.logs=previous;historyExportApproval=null;}
+}
+function render(){document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));if(storageRecoveryMode){$('content').innerHTML='<div class="card"><h2>資料保護模式</h2><p>系統無法安全讀取原有資料，因此已停止儲存，避免覆蓋資料。請先使用「資料備份」下載原始復原檔，或以先前 JSON 備份還原。請不要清除網站資料或移除 App。</p></div>';return}let out='';if(tab==='reminders'){out=reminderPanel()}if(tab==='today'){out=`<h2>今日用藥 <span class="muted">${today()}</span></h2><div class="card"><strong>每日用藥提醒</strong><p class="muted">開啟 App 可查看今日用藥與服藥確認。iPhone 在 App 關閉後的定時推播尚需後端推播服務，現階段尚未啟用。</p><button class="secondary" onclick="requestNotifications()">檢查通知權限</button></div>`;let fixed=meds().filter(m=>m.type==='fixed');out+=fixed.length?'':'<div class="card">尚未建立固定服用的藥物，請到「我的藥物」新增。</div>';for(const m of fixed){let times=(m.times||'').split(',').map(x=>x.trim()).filter(Boolean);for(const t of times){let done=db.logs.some(l=>l.medId===m.id&&l.slot===t&&l.date===today());out+=`<div class="card medrow">${pic(m)}<div><strong>${safe(m.name)}</strong><div class="muted">${safe(t)} · ${m.dose} ${safe(m.unit)}</div></div><button class="${done?'secondary':''}" onclick="toggleDose('${m.id}','${safe(t)}')">${done?'✓ 已服用':'已服用'}</button></div>`}}out+='<h2>需要時服用</h2>';let prn=meds().filter(m=>m.type==='prn');out+=prn.length?'':'<div class="card">尚未建立需要時服用的藥物。</div>';for(const m of prn)out+=`<div class="card medrow">${pic(m)}<div><strong>${safe(m.name)}</strong><div class="muted">庫存 ${m.stock} ${safe(m.unit)}</div></div><button onclick="takePrn('${m.id}')">記錄服用</button></div>`}
+if(tab==='meds'){out=`<h2>我的藥物</h2><button onclick="showForm()">＋ 新增藥物</button><label>藥物使用狀態</label><select onchange="medFilter=this.value;render()"><option value="active" ${medFilter==='active'?'selected':''}>使用中</option><option value="inactive" ${medFilter==='inactive'?'selected':''}>已停用</option><option value="all" ${medFilter==='all'?'selected':''}>全部</option></select><div id="editor"></div>`;for(const m of allMeds().filter(m=>medFilter==='all'||(medFilter==='active'?m.active!==false:m.active===false)))out+=`<div class="card medrow">${pic(m)}<div><strong>${safe(m.name)}</strong><div class="muted">${safe(m.info||'尚未填寫用途')} · ${m.type==='fixed'?'固定服用':'需要時服用'}</div><div class="muted">庫存 ${m.stock} ${safe(m.unit)}${m.expiry?' · 有效期限 '+safe(m.expiry):''}${m.acquired?' · 取得日期 '+safe(m.acquired):''}</div></div><button class="secondary" onclick="showForm('${m.id}')">編輯</button></div>`;out+='<h2>藥物過敏史</h2><p class="muted">依目前選取的使用者分開保存；「過敏者」可自行輸入姓名。若只是懷疑，請選「疑似反應」並描述實際症狀。</p><div class="card"><label>過敏者（必填）</label><input id="allergyPerson" value="'+safe(person())+'" placeholder="可自行修改過敏者姓名"><p class="muted">預設為「目前查看」的名稱，可自行修改；儲存後不會因切換使用者而改變。</p><label>藥物名稱</label><input id="allergyName" placeholder="例如：某藥品名稱"><label>藥物成分</label><input id="allergyIngredient" placeholder="知道成分時再填寫"><label>紀錄狀態</label><select id="allergyStatus" onchange="toggleAllergyReminderField()"><option>疑似反應</option><option>醫療人員確認</option><option>尚待確認</option></select><div id="allergyReminderWrap"><label>提醒內容（僅疑似反應顯示）</label><textarea id="allergyReminderContent" placeholder="例如：再次使用前先向醫師或藥師確認"></textarea></div><label>反應／備註</label><textarea id="allergyNote" placeholder="例如：服用後出現紅疹、發生時間、曾否就醫"></textarea><button onclick="addAllergy()">新增過敏史</button></div>';for(const a of db.allergies.filter(a=>a.person===person()))out+=`<div class="card"><div class="row"><strong>${safe(a.name||'未填藥名')}</strong><span class="pill">${safe(a.status||'未註明')}</span></div><div class="muted">過敏者：${safe(allergyPersonName(a))}</div><div class="muted">藥物成分：${safe(a.ingredient||'未填寫')}</div><p>${safe(a.note||'未填寫反應／備註')}</p>${a.status==='疑似反應'&&a.reminderContent?`<p><strong>提醒內容：</strong>${safe(a.reminderContent)}</p>`:''}<button class="secondary" onclick="deleteAllergy('${a.id}')">刪除紀錄</button></div>`;out+='<div class="row"><button class="secondary" onclick="shareAllergies()">LINE 分享過敏史</button><button class="secondary" onclick="exportAllergiesPDF()">匯出 PDF</button></div>'}
+if(tab==='stock'){out=stockPanel()}
+if(tab==='history'){
+ out='<h2>服藥歷史</h2><div class="card"><p class="muted">可依日期匯出目前查看者的服藥紀錄。請先確認 PDF 已保存，才可刪除該範圍紀錄。刪除不會補回庫存，也不會更動提醒設定。</p><div class="grid history-date-grid"><div><label>開始日期（選填）</label><input id="historyFrom" type="date" onchange="resetHistoryExport()"></div><div><label>結束日期（選填）</label><input id="historyTo" type="date" onchange="resetHistoryExport()"></div></div><div class="row"><button id="historyExportBtn" onclick="exportHistoryPDF()">匯出服藥歷史 PDF</button></div><div id="historyExportGate" class="hidden"><label><input type="checkbox" id="historyPdfSaved" style="width:auto" onchange="updateHistoryDeleteButton()"> 我已在「檔案」App 確認 PDF 成功保存，並了解刪除後無法在 App 內復原</label><button class="danger" id="historyDeleteBtn" disabled onclick="deleteExportedHistory()">刪除已匯出的服藥紀錄</button></div></div>';
+ let ids=new Set(allMeds().map(m=>m.id));let logs=db.logs.filter(l=>ids.has(l.medId)).sort((a,b)=>String(b.at).localeCompare(String(a.at)));
+ for(const l of logs){let m=db.meds.find(m=>m.id===l.medId);out+=`<div class="card row"><div><strong>${safe(m?.name||'已刪除藥物')}</strong><div class="muted">${safe(String(l.at||'').replace('T',' '))} · ${safe(l.qty)} ${safe(m?.unit||'')}</div></div><button class="secondary" onclick="undo('${l.id}')">撤銷</button></div>`}
+ if(!logs.length)out+='<div class="card">尚無服藥紀錄。</div>';
+}
+ $('content').innerHTML=out;if(tab==='stock')stockRestore();if($('allergyStatus'))toggleAllergyReminderField()}
+function addLog(m,qty,slot=''){if(!Number.isFinite(qty)||qty<=0)return alert('服用量必須大於 0，可以輸入整數或小數。');if(m.stock<qty)return alert('庫存不足，請先補充庫存。');m.stock=+(m.stock-qty).toFixed(4);db.logs.push({id:crypto.randomUUID(),medId:m.id,qty,slot,date:today(),at:new Date().toLocaleString('sv-SE').replace(' ','T')});save();if(low(m))alert(`${m.name} 已達庫存提醒條件。`)}
+function undo(id){let i=db.logs.findIndex(l=>l.id===id);if(i<0)return;let l=db.logs[i],m=db.meds.find(m=>m.id===l.medId);if(m)m.stock=+(m.stock+l.qty).toFixed(4);db.logs.splice(i,1);save()}
+function toggleDose(id,slot){let m=db.meds.find(x=>x.id===id);let l=db.logs.find(x=>x.medId===id&&x.slot===slot&&x.date===today());if(l){if(confirm('取消這次服藥紀錄並恢復庫存？'))undo(l.id)}else addLog(m,m.dose,slot)}
+function takePrn(id){let m=db.meds.find(x=>x.id===id);let q=Number(prompt(`本次服用 ${m.name} 幾${m.unit}？`,m.dose));if(Number.isFinite(q)&&q>0)addLog(m,q)}
+function restock(id){let m=db.meds.find(x=>x.id===id),q=Number(prompt(`要補充多少 ${m.unit}？`,'10'));if(Number.isFinite(q)&&q>0){m.stock=+(m.stock+q).toFixed(4);save()}}
+function showForm(id){
+ let m=db.meds.find(x=>x.id===id)||{name:'',info:'',type:'fixed',unit:'顆',dose:1,daily:1,stock:0,threshold:10,days:7,times:'08:00',photo:''};
+ $('editor').innerHTML=`<form class="card" id="medform"><h2>${id?'編輯藥物':'新增藥物'}</h2><div class="grid">
+ <div class="full"><label>藥物名稱（必填）</label><input name="name" required value="${safe(m.name)}"></div>
+ <div><label>使用狀態</label><select name="active"><option value="true" ${m.active!==false?'selected':''}>使用中</option><option value="false" ${m.active===false?'selected':''}>已停用</option></select></div><div><label>服用類型</label><select name="type"><option value="fixed" ${m.type==='fixed'?'selected':''}>固定服用</option><option value="prn" ${m.type==='prn'?'selected':''}>需要時服用</option></select></div>
+ <div><label>庫存／服用單位</label><input name="unit" value="${safe(m.unit)}"></div>
+ <div><label>每次服用量</label><input type="number" step="any" min="0.001" name="dose" value="${m.dose}"></div>
+ <div><label>每日預計使用量</label><input type="number" step="any" min="0" name="daily" value="${m.daily}"></div>
+ <div class="full"><label>固定服藥時間（多個以半形逗號分隔，例如 08:00,20:00）</label><input name="times" value="${safe(m.times||'')}"></div>
+ <div><label>目前庫存</label><input type="number" min="0" step="any" name="stock" value="${m.stock}"></div>
+ <div><label>庫存提醒數量</label><input type="number" min="0" name="threshold" value="${m.threshold}"></div>
+ <div><label>剩餘天數提醒（0 表示停用）</label><input type="number" min="0" name="days" value="${m.days}"></div>
+ <div class="full" style="border-top:1px solid #e6e8df;margin-top:8px;padding-top:8px"><strong>選填資料</strong></div>
+ <div class="full"><label>用途及備註（選填）</label><textarea name="info">${safe(m.info)}</textarea></div>
+ <div class="full"><label>有效期限（選填）</label><input name="expiry" type="date" value="${safe(m.expiry||'')}"></div>
+ <div class="full"><label>取得日期（選填）</label><input name="acquired" type="date" value="${safe(m.acquired||'')}"></div>
+ <div class="full"><label>藥品許可證字號（選填）</label><input name="license" value="${safe(m.license||'')}"></div>
+ <div class="full"><label>資料來源網址（選填）</label><input name="source" type="url" placeholder="https://..." value="${safe(m.source||'')}"></div>
+ <div><label>預設購買單位</label><input name="buyUnit" value="${safe(m.buyUnit||'盒')}"></div>
+ <div><label>預設購買數量</label><input name="buyQty" type="number" step="any" min="0.001" value="${m.buyQty||1}"></div>
+ <div><label>每包裝含量（選填）</label><input name="packSize" type="number" step="any" min="0" value="${m.packSize||''}"></div>
+ <div class="full"><label>搜尋藥物圖片</label><div class="row"><input id="lookupTerm" placeholder="輸入藥物名稱或外觀特徵" value="${safe(m.name)}"><button type="button" class="secondary" onclick="lookupMedicine()">搜尋圖片</button></div><div class="row" style="margin-top:10px;flex-wrap:wrap;justify-content:flex-start"><button type="button" class="secondary" onclick="lookupTaiwanMedicine()">搜尋台灣藥品資料</button></div><p class="muted">圖片與台灣藥品資料搜尋會在新分頁開啟；「搜尋台灣藥品資料」使用一般網頁搜尋查找台灣藥品資料，並非 App 直接讀取官方資料庫。請以藥袋、許可證字號、劑型及含量核對。若要儲存照片，請使用下方「藥物照片」上傳自己拍攝或有權使用的圖片。</p></div>
+ <div class="full"><label>藥物照片（選填）</label><input type="file" id="photoInput" accept="image/*"><p class="muted">新上傳的照片會自動縮小並壓縮；既有照片保持不變。</p></div>
+ </div><div class="row"><button type="submit">儲存藥物</button>${id?`<button type="button" class="danger" onclick="deleteMed('${id}')">刪除藥物</button>`:''}<button type="button" class="secondary" onclick="render()">取消</button></div></form>`;
+ $('medform').onsubmit=async e=>{e.preventDefault();let f=new FormData(e.target);let v={id:id||crypto.randomUUID(),person:person(),name:f.get('name').trim(),info:f.get('info'),expiry:f.get('expiry')||'',acquired:f.get('acquired')||'',license:f.get('license'),source:f.get('source').trim(),type:f.get('type'),unit:f.get('unit')||'顆',buyUnit:f.get('buyUnit')||'盒',buyQty:Number(f.get('buyQty'))||1,packSize:Number(f.get('packSize'))||0,active:f.get('active')!=='false',dose:Number(f.get('dose')),daily:Number(f.get('daily')),times:f.get('times'),stock:Number(f.get('stock')),threshold:Number(f.get('threshold')),days:Number(f.get('days')),photo:m.photo};if(!Number.isFinite(v.dose)||v.dose<=0||!Number.isFinite(v.daily)||v.daily<0||!Number.isFinite(v.stock)||v.stock<0||!Number.isSafeInteger(v.threshold)||v.threshold<0||!Number.isSafeInteger(v.days)||v.days<0){alert('請輸入有效數值；服用量可以是整數或小數，提醒天數須為整數。');return;}let file=$('photoInput').files[0];if(file){try{v.photo=await compressMedicinePhoto(file)}catch(err){alert('照片處理失敗：'+err.message);return}}if(id)db.meds[db.meds.findIndex(x=>x.id===id)]=v;else db.meds.push(v);save()}
+}
+function lookupMedicine(){let q=$('lookupTerm').value.trim();if(!q)return alert('請輸入藥物名稱。');window.open('https://www.google.com/search?tbm=isch&q='+encodeURIComponent(q+' 藥物 外觀'),'_blank','noopener,noreferrer')}
+function lookupTaiwanMedicine(){let q=$('lookupTerm').value.trim();if(!q)return alert('請輸入藥物名稱。');window.open('https://www.google.com/search?q='+encodeURIComponent(q+' 台灣 藥品 資料 許可證'),'_blank','noopener,noreferrer')}
+
+function exportData(){const data=storageRecoveryMode?rawAtStartup:JSON.stringify({format:'medication-journal',version:5,families:db.families,restocks:db.restocks,reminders:db.reminders,reminderTimes:db.reminderTimes,allergies:db.allergies,unopenedStocks:db.unopenedStocks,purchaseNotes:db.purchaseNotes,purchasePrices:db.purchasePrices,exportedAt:new Date().toISOString(),meds:db.meds,logs:db.logs},null,2);const url=URL.createObjectURL(new Blob([data||''],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download=storageRecoveryMode?'藥物使用紀錄_原始資料復原檔.json':'藥物使用紀錄_備份_'+today()+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+async function importData(event){const file=event.target.files?.[0];if(!file)return;try{if(file.size>12*1024*1024)throw Error('備份檔過大');const v=JSON.parse(await file.text());if(v.format!=='medication-journal'||!Array.isArray(v.meds)||!Array.isArray(v.logs))throw Error('備份格式不正確');if(v.meds.some(m=>typeof m.id!=='string'||typeof m.person!=='string'||typeof m.name!=='string'||!Number.isFinite(m.stock))||v.logs.some(l=>typeof l.id!=='string'||typeof l.medId!=='string'||!Number.isFinite(l.qty)))throw Error('備份資料格式不正確');if(!confirm('還原將覆蓋目前所有藥物與服藥紀錄。確定繼續？'))return;const old=db,oldRecoveryMode=storageRecoveryMode;db={meds:v.meds,logs:v.logs,families:Array.isArray(v.families)?v.families:[...new Set(v.meds.map(m=>m.person).filter(x=>x!=='自己'))],restocks:Array.isArray(v.restocks)?v.restocks:[],reminders:v.reminders&&typeof v.reminders==='object'&&!Array.isArray(v.reminders)?v.reminders:{},reminderTimes:v.reminderTimes&&typeof v.reminderTimes==='object'&&!Array.isArray(v.reminderTimes)?v.reminderTimes:{},allergies:Array.isArray(v.allergies)?v.allergies:[],unopenedStocks:Array.isArray(v.unopenedStocks)?v.unopenedStocks:[],purchaseNotes:v.purchaseNotes&&typeof v.purchaseNotes==='object'&&!Array.isArray(v.purchaseNotes)?v.purchaseNotes:{},purchasePrices:v.purchasePrices&&typeof v.purchasePrices==='object'&&!Array.isArray(v.purchasePrices)?v.purchasePrices:{}};storageRecoveryMode=false;refreshPeople();try{localStorage.setItem(KEY,JSON.stringify(db));render();alert('備份還原完成。')}catch(e){db=old;storageRecoveryMode=oldRecoveryMode;alert('儲存失敗，原資料未變更。')}}catch(e){alert('無法還原：'+e.message)}finally{event.target.value=''}}
+function deleteMed(id){if(confirm('刪除此藥物？過去的服藥紀錄也會刪除。')){const m=db.meds.find(x=>x.id===id);if(m)delete db.purchasePrices[priceKey(m)];db.meds=db.meds.filter(m=>m.id!==id);db.logs=db.logs.filter(l=>l.medId!==id);save()}}
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{if(tab==='stock'&&b.dataset.tab!=='stock'&&!stockExit())return;historyExportApproval=null;tab=b.dataset.tab;render()});$('person').onchange=()=>{if(tab==='stock'&&!stockExit()){$('person').value=lastPerson;return;}lastPerson=person();historyExportApproval=null;render()};refreshPeople();lastPerson=person();
+if(storageRecoveryMode){$('content').innerHTML='<div class="card"><h2>資料保護模式</h2><p>系統無法安全讀取原有資料，因此已停止儲存，避免覆蓋資料。請不要清除網站資料或移除 App。若你有先前 JSON 備份，請使用下方「還原備份」；原始資料仍保留在此網站儲存空間中。</p></div>';}
+else render();
+</script></body></html>

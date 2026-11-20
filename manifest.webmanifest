@@ -1,0 +1,17 @@
+{
+  "name": "藥物使用紀錄",
+  "short_name": "用藥紀錄",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#faf8f2",
+  "theme_color": "#84917a",
+  "lang": "zh-Hant",
+  "icons": [
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
